@@ -10,6 +10,45 @@ Resources:
       Runtime: python2.7
       Timeout: 120
       Role: !GetAtt HelloRole.Arn
+      Events:
+        GetResource:
+          Type: Api
+          Properties:
+            Path: /resource/{resourceId}
+            Method: get
+
+  LambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: "lambda:invokeFunction"
+      FunctionName: !GetAtt HelloFunction.Arn
+      Principal: "apigateway.amazonaws.com"
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HelloApi}/*"
+
+
+  HelloApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: Test API
+
+  UsersResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref HelloApi
+      ParentId: !GetAtt HelloApi.RootResourceId
+      PathPart: user
+
+  UsersGet:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref HelloApi
+      ResourceId: !Ref UsersResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HelloFunction.Arn}/invocations"
 
   HelloRole:
     Type: AWS::IAM::Role
